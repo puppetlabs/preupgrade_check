@@ -4,13 +4,13 @@
 caServer=$(puppet config print ca_server)
 catest=$(puppet config print hostcert | grep $(puppet config print ca_server))
 catime=''
-mytime=$(date --utc --date '2017-08-17 04:00:01' +%s)
+mytime=$(date --utc +%s)
 if [ -z $catest ];
 then
   is_ca='false'
 else
   is_ca='true'
-  catime=$(date --utc --date '2017-08-17 04:00:01' +%s)
+  catime=$mytime
 fi
 
 # Output in json format
