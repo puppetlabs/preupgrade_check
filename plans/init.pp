@@ -111,7 +111,7 @@ plan preupgrade_check(
       })
     }
     else {
-      return($error_set)
+      return($result_set)
     }
   }
   else {
