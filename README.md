@@ -28,7 +28,7 @@ Please add mod `'itgrl/preupgrade_check'` to your Puppet file and perform `bolt 
 To run the preupgrade_check you would prepare a list of puppet infrastructure nodes, one entry per line, in a text file and run the command.
 `bolt plan run preupgrade_check -n @<mynodelist>`
 
-###Optional arguments
+### Optional arguments
 To run in debug mode, add debug=true to the command line.
 `bolt plan run preupgrade_check debug=true -n @<mynodelist>`
 
