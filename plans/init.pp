@@ -2,144 +2,124 @@ plan preupgrade_check(
   TargetSpec $nodes,
   Boolean    $fail_plan_on_errors = true,
   Integer    $time_skew = 60,
+  Boolean    $debug = false,
 ) {
-  if $nodes.empty { return ResultSet.new([]) }
-
-  #apply_prep([$nodes])
-
-  $os_results = run_task(preupgrade_check::check_os, $nodes, '_catch_errors' => true ) 
-  
-  $failed_results = $os_results.error_set()
-
-  $failed_targets = ResultSet($failed_results).targets()
-
-  $agent_failures = $os_results.filter | $result | {
-    if !$result['puppet-agent'] != 'running' {
-      true
-    }
-  }
-
-  $agent_fail_targets = ResultSet($agent_failures).targets()
-
-  $proc_err = {
-    msg  => 'Target has an error with a service',
-    kind => 'bolt/check_os',
-  }
-
-  if !$agent_fail_targets.empty {
-    $agent_set = $agent_fail_targets.map | $target | {
-      Result.new($target, {
-        _output => 'does not have a running puppet agent.',
-        _error  => $proc_err,
-      })
-    }
-  }
-
-  $pxp_failures = $os_results.filter | $result | {
-    if !$result['pxp-agent'] != 'running' {
-      true
-    }
-  }
-
-  $pxp_fail_targets = ResultSet($pxp_failures).targets()
-  if !$pxp_fail_targets.empty {
-    $pxp_set = $pxp_fail_targets.map | $target | {
-      Result.new($target, {
-        _output => 'does not have a running pxp-agent.',
-        _error  => $proc_err,
-      })
-    }
-  }
-
-  $fs_err = {
-     msg  => 'Target has an error with a service',
-     kind => 'bolt/check_os',
-  }
-
-  $codedir_failures = $os_results.filter | $result | {
-    if $result['CodeDirectoryUsage'] > '50' {
-      true
-    }
-  }
-
-  $codedir_fail_targets = ResultSet($codedir_failures).targets()
-  if !$codedir_fail_targets.empty {
-    $codedir_set = $codedir_failures.map | $target | {
-      Result.new($target, {
-        _output => 'has a code directory filesystem greater than 50% utilized.',
-        _error  => $fs_err,
-      })
-    }
-  }
-
-  $puppetdir_failures = $os_results.filter | $result | {
-    if $result['PuppetDirectoryUsage'] > '50' {
-      true
-    }
-  }
-
-  $puppetdir_fail_targets = ResultSet($puppetdir_failures).targets()
-  if !$puppetdir_fail_targets.empty {
-    $puppetdir_set = $puppetdir_failures.map | $target | {
-      Result.new($target, {
-        _output => 'has a puppet directory filesystem greater than 50% utilized.',
-        _error  => $fs_err,
-      })
-    }
-  }
-
+  if $nodes.empty { return ResultSet.new([]) } 
+  $os_results = run_task(preupgrade_check::check_os, $nodes, '_catch_errors' => true )
   $time_results = run_task(preupgrade_check::check_time, $nodes, '_catch_errors' => true )
-  $ca_time = $time_results.filter_set |$result| { $result['is_ca'] }.first['catime'] 
-  $catime = Integer("${ca_time}")
+  $targets = $os_results.targets
 
-  $time_failures = $time_results.filter | $result | {
-    $mytime = Integer("${result['mytime']}")
-    $delta = ( $catime - $mytime )
-    if (-60 >= $delta) and ($delta >= 60) {
+  $failed_results = $os_results.error_set()
+  $failed_targets = ResultSet($failed_results).targets()
+    $failures = $os_results.map | $result | {
+      $target = $result.target
+      if $result['puppet-agent'] != 'running' {
+        $err = true
+        $agent_msg = 'Puppet agent is not running.'
+      }
+      else {
+        $agent_msg = 'Puppet agent is running'
+      }
+  
+      if $result['pxp-agent'] != 'running' {
+        $err = true
+        $pxp_msg = 'PXP agent is not running.'
+      }
+      else {
+        $pxp_msg = 'PXP agent is running.'
+      }
+
+      $codedir_usage = Integer("${result['CodeDirectoryUsage']}")
+      if $codedir_usage > 50 {
+        $err = true
+        $codedir_msg = "Code directory filesystem utilization of ${codedir}% is greater than 50% utilized."
+      }
+      else {
+        $codedir_msg = 'Code directory filesystem utilization is ok.'
+      }
+
+      $puppetdir_usage = Integer("${result['PuppetDirectoryUsage']}")
+      if $puppetdir_usage > 50 {
+        $err = true
+        $puppetdir_msg = 'Puppet directory filesystem is greater than 50% utilized.'
+      }
+      else {
+        $puppetdir_msg = 'Puppet directory filesystem utilization is ok.'
+      }
+
+      $ca_time = $time_results.filter_set |$time_result| { $time_result['is_ca'] }.first['catime']
+      $catime = Integer("${ca_time}")
+      $time_value = $time_results.find($result.target().name())['mytime']
+      $mytime = Integer("${time_value}") 
+      if $catime > $mytime {
+        $delta = $catime - $mytime
+      }
+      else {
+        $delta = $mytime - $catime
+      }
+      if $delta > $time_skew {
+        $time_msg = "Time variance is greater than ${time_skew} seconds from the time of the PuppetCA."
+      }
+      else {
+        $time_msg = 'Time delta is within acceptable the acceptable range of the PuppetCA.'
+      }
+      
+      if defined('$err') {
+        Result.new($target, {
+           _has_errors       => true,
+           _agent_output     => $agent_msg,
+           _pxp_output       => $pxp_msg,
+           _codedir_output   => $codedir_msg,
+           _puppetdir_output => $puppetdir_msg,
+           _time_output      => $time_msg,
+          _output           => 'Please contact support prior to upgrading',
+          _error            => {
+              msg  => 'The pre-upgrade checks have failed in one or more areas.',
+              kind => 'bolt/plan/preupgrade_check'
+            }
+          })
+      }
+      else {
+         Result.new($target, {
+           _agent_output     => $agent_msg,
+           _pxp_output       => $pxp_msg,
+           _codedir_output   => $codedir_msg,
+           _puppetdir_output => $puppetdir_msg,
+           _time_output      => $time_msg,
+         })        
+      }
+    }
+
+  $failure_set = $failures.filter |$failed| {
+    if $failed['_has_errors'] {
       true
     }
   }
-  
-  $time_err = {
-    msg  => 'Target has an error with time syncronization',
-    kind => 'bolt/check_time',
-  }
 
-  $time_fail_targets = Resultset($time_failures).targets()
-  if !$time_fail_targets.empty {
-    $time_set = $time_failures.map | $target | {
-      Result.new($target, {
-        _output => 'has a date/time with too great of a delta of that of the PuppetCA.',
-        _error  => $time_err,
+  $error_set = Resultset.new($failure_set)
+
+  if $debug {
+    $total_results = $targets.map |$target| { 
+      Result.new($target, {"os" => $os_results.find($target.name).to_data, "time" => $time_results.find($target.name).to_data } )
+    }
+    $result_set = ResultSet($total_results)
+    if ($fail_plan_on_errors and !$error_set.empty) {
+      fail_plan('One or more targets have failed the checks.', 'plan/preupgrade_check', {
+        data        => $result_set,
+        errors      => $error_set,
+        failednodes => $error_set.names,
       })
     }
-  }
-
-  $os_ok = Resultset($os_results)
-  #  if !$os_ok.empty {
-  #  $ok_os_set = $os_ok.map |$target| {
-  #    Result.new($target, {
-  #      _output => "
-  #        pe_build           = ${target['pe_build']} \n
-  #        pe_server_version  = ${target['pe_server_version']} \n
-  #        Licensed Nodes     = ${target['LicensedNodes']} \n
-  #        License End Date   = ${target['LicenseEndDate']} \n
-  #        CA Cert Expiration = ${target['CAcertExpiration']} \n
-  #      ",
-  #    })
-  #  }
-  #}
-
-  $result_set = ResultSet.new($os_ok)
-  #$result_set = ResultSet.new($os_ok + $agent_set + $pxp_set + $codedir_set + $puppetdir_set + $time_set)
-  if ($fail_plan_on_errors and !$result_set.ok) {
-    fail_plan('One or more targets have failed the checks.', {
-        action         => 'plan/preupgrade_check',
-        result_set     => $result_set,
-        failed_targets => $result_set.error_set.targets,
-    })
+    else {
+      return($error_set)
+    }
   }
   else {
-    return($result_set)
+    if ($fail_plan_on_errors and !$error_set.empty) {
+      fail_plan('One or more targets have failed the checks.', 'plan/preupgrade_check', {
+        errors      => $error_set,
+        failednodes => $error_set.names,
+      })
+    }
   }
 }
