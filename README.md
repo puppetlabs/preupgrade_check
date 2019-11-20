@@ -20,7 +20,7 @@ This module provides the plan preupgrade_check that performs an initial automate
 ### Setup Requirements
 
 This plan can be ran from Puppet Bolt against all your infrastructure nodes.
-Please add mod `'itgrl/preupgrade_check'` to your Puppet file and perform `bolt puppetfile install`
+Please add `mod 'itgrl/preupgrade_check'` to your Puppet file and perform `bolt puppetfile install`
 
 
 ## Usage
