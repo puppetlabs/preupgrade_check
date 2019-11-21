@@ -1,7 +1,7 @@
 plan preupgrade_check(
   TargetSpec $nodes,
   Boolean    $fail_plan_on_errors = true,
-  Integer    $time_skew = 60,
+  Integer    $time_skew = 60,  ## May want to keep under 300 seconds due to hitting SSL limitations.
   Boolean    $debug = false,
 ) {
   if $nodes.empty { return ResultSet.new([]) } 
