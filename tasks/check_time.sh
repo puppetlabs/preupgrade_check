@@ -1,6 +1,10 @@
 #!/bin/sh
 # Task to check the time on Puppet Infrastructure.
 # Additionally this task checks to see if server is PuppetCA.
+
+# Initialize the path in case the shell environment has been reset.
+PATH=/opt/puppetlabs/puppet/bin:/opt/puppetlabs/server/bin:/usr/local/bin:$PATH
+
 caServer=$(puppet config print ca_server)
 catest=$(puppet config print hostcert | grep $(puppet config print ca_server))
 catime=''
