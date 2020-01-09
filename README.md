@@ -73,3 +73,7 @@ The tasks copy and run scripts to the nodes as root. You can run these scripts t
 We welcome assistance in keeping this module up to date.
 
 Please fork the repository and create a Pull Request with description of what you are changing.
+
+### Credits
+
+This module was written by [Rebecca Robinson](https://github.com/itgrl/preupgrade_check) and is maintained by the Puppet technical support team.
