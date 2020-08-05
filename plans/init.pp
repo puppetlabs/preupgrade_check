@@ -14,7 +14,7 @@ plan preupgrade_check(
     $failures = $os_results.map | $result | {
       $target = $result.target
       if $result['puppet-agent'] != 'running' {
-        $err = true
+        $err_puppet_agent = true
         $agent_msg = 'Puppet agent is not running.'
       }
       else {
@@ -22,7 +22,7 @@ plan preupgrade_check(
       }
   
       if $result['pxp-agent'] != 'running' {
-        $err = true
+        $err_pxp_agent = true
         $pxp_msg = 'PXP agent is not running.'
       }
       else {
@@ -31,8 +31,8 @@ plan preupgrade_check(
 
       $codedir_usage = Integer("${result['CodeDirectoryUsage']}")
       if $codedir_usage > 50 {
-        $err = true
-        $codedir_msg = "Code directory filesystem utilization of ${codedir}% is greater than 50% utilized."
+        $err_codedir_usage = true
+        $codedir_msg = "Code directory filesystem utilization of ${codedir_usage}% is greater than 50% utilized."
       }
       else {
         $codedir_msg = 'Code directory filesystem utilization is ok.'
@@ -40,8 +40,8 @@ plan preupgrade_check(
 
       $puppetdir_usage = Integer("${result['PuppetDirectoryUsage']}")
       if $puppetdir_usage > 50 {
-        $err = true
-        $puppetdir_msg = 'Puppet directory filesystem is greater than 50% utilized.'
+        $err_puppetdir_usage = true
+        $puppetdir_msg = "Puppet directory filesystem utilization of ${puppetdir_usage}% is greater than 50% utilized."
       }
       else {
         $puppetdir_msg = 'Puppet directory filesystem utilization is ok.'
@@ -64,7 +64,8 @@ plan preupgrade_check(
         $time_msg = 'Time delta is within acceptable the acceptable range of the PuppetCA.'
       }
       
-      if defined('$err') {
+      if defined('$err_puppet_agent') or defined('$err_pxp_agent') or
+         defined('$err_codedir_usage') or defined('$err_puppetdir_usage') {
         Result.new($target, {
            _has_errors       => true,
            _agent_output     => $agent_msg,
