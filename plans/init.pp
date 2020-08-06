@@ -4,7 +4,7 @@ plan preupgrade_check(
   Integer    $time_skew = 60,  ## May want to keep under 300 seconds due to hitting SSL limitations.
   Boolean    $debug = false,
 ) {
-  if $nodes.empty { return ResultSet.new([]) } 
+  if $nodes.empty { return ResultSet.new([]) }
   $os_results = run_task(preupgrade_check::check_os, $nodes, '_catch_errors' => true )
   $time_results = run_task(preupgrade_check::check_time, $nodes, '_catch_errors' => true )
   $targets = $os_results.targets
@@ -20,7 +20,7 @@ plan preupgrade_check(
       else {
         $agent_msg = 'Puppet agent is running'
       }
-  
+
       if $result['pxp-agent'] != 'running' {
         $err_pxp_agent = true
         $pxp_msg = 'PXP agent is not running.'
@@ -29,7 +29,7 @@ plan preupgrade_check(
         $pxp_msg = 'PXP agent is running.'
       }
 
-      $codedir_usage = Integer("${result['CodeDirectoryUsage']}")
+      $codedir_usage = Integer($result['CodeDirectoryUsage'])
       if $codedir_usage > 50 {
         $err_codedir_usage = true
         $codedir_msg = "Code directory filesystem utilization of ${codedir_usage}% is greater than 50% utilized."
@@ -38,7 +38,7 @@ plan preupgrade_check(
         $codedir_msg = 'Code directory filesystem utilization is ok.'
       }
 
-      $puppetdir_usage = Integer("${result['PuppetDirectoryUsage']}")
+      $puppetdir_usage = Integer($result['PuppetDirectoryUsage'])
       if $puppetdir_usage > 50 {
         $err_puppetdir_usage = true
         $puppetdir_msg = "Puppet directory filesystem utilization of ${puppetdir_usage}% is greater than 50% utilized."
@@ -48,9 +48,9 @@ plan preupgrade_check(
       }
 
       $ca_time = $time_results.filter_set |$time_result| { $time_result['is_ca'] }.first['catime']
-      $catime = Integer("${ca_time}")
+      $catime = Integer($ca_time)
       $time_value = $time_results.find($result.target().name())['mytime']
-      $mytime = Integer("${time_value}") 
+      $mytime = Integer($time_value)
       if $catime > $mytime {
         $delta = $catime - $mytime
       }
@@ -63,31 +63,31 @@ plan preupgrade_check(
       else {
         $time_msg = 'Time delta is within acceptable the acceptable range of the PuppetCA.'
       }
-      
+
       if defined('$err_puppet_agent') or defined('$err_pxp_agent') or
-         defined('$err_codedir_usage') or defined('$err_puppetdir_usage') {
+        defined('$err_codedir_usage') or defined('$err_puppetdir_usage') {
         Result.new($target, {
-           _has_errors       => true,
-           _agent_output     => $agent_msg,
-           _pxp_output       => $pxp_msg,
-           _codedir_output   => $codedir_msg,
-           _puppetdir_output => $puppetdir_msg,
-           _time_output      => $time_msg,
+          _has_errors       => true,
+          _agent_output     => $agent_msg,
+          _pxp_output       => $pxp_msg,
+          _codedir_output   => $codedir_msg,
+          _puppetdir_output => $puppetdir_msg,
+          _time_output      => $time_msg,
           _output           => 'Please contact support prior to upgrading',
           _error            => {
-              msg  => 'The pre-upgrade checks have failed in one or more areas.',
-              kind => 'bolt/plan/preupgrade_check'
-            }
-          })
+            msg  => 'The pre-upgrade checks have failed in one or more areas.',
+            kind => 'bolt/plan/preupgrade_check'
+          }
+        })
       }
       else {
-         Result.new($target, {
-           _agent_output     => $agent_msg,
-           _pxp_output       => $pxp_msg,
-           _codedir_output   => $codedir_msg,
-           _puppetdir_output => $puppetdir_msg,
-           _time_output      => $time_msg,
-         })        
+        Result.new($target, {
+          _agent_output     => $agent_msg,
+          _pxp_output       => $pxp_msg,
+          _codedir_output   => $codedir_msg,
+          _puppetdir_output => $puppetdir_msg,
+          _time_output      => $time_msg,
+        })
       }
     }
 
@@ -100,8 +100,8 @@ plan preupgrade_check(
   $error_set = Resultset.new($failure_set)
 
   if $debug {
-    $total_results = $targets.map |$target| { 
-      Result.new($target, {"os" => $os_results.find($target.name).to_data, "time" => $time_results.find($target.name).to_data } )
+    $total_results = $targets.map |$target| {
+      Result.new($target, {'os' => $os_results.find($target.name).to_data, 'time' => $time_results.find($target.name).to_data } )
     }
     $result_set = ResultSet($total_results)
     if ($fail_plan_on_errors and !$error_set.empty) {
