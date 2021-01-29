@@ -6,10 +6,10 @@
   "license": "Apache-2.0",
   "source": "",
   "dependencies": [
-     {
-       "name": "puppetlabs/stdlib",
-       "version_requirement": ">= 2.1.0 < 7.0.0"
-     }
+    {
+      "name": "puppetlabs/stdlib",
+      "version_requirement": ">= 2.1.0 < 7.0.0"
+    }
   ],
   "operatingsystem_support": [
     {
@@ -55,7 +55,7 @@
       "version_requirement": ">= 4.10.0 < 7.0.0"
     }
   ],
-  "pdk-version": "1.13.0",
-  "template-url": "pdk-default#1.13.0",
-  "template-ref": "1.13.0-0-g66e1443"
+  "pdk-version": "1.18.1",
+  "template-url": "pdk-default#1.18.1",
+  "template-ref": "tags/1.18.1-0-g3d2e75c"
 }
